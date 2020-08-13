@@ -13,35 +13,29 @@ def pol2xy(rho, theta):
     
 def xy2pol(x,y):
     rho = np.sqrt(x**2 + y**2)
-    
     theta = np.arctan2( x ,y)
-    
     return rho, theta
-
-def med(a,b):
-    return (a+b)/2.0
-
 
 def bezier_point(x1,y1,x2,y2,verbose=False):
     r1,t1 = xy2pol(x1,y1)
     r2,t2 = xy2pol(x2,y2)        
 
     if t1*t2 <0 and abs(t1)+abs(t2)>pi: 
-        if verbose: print "foo %s %s [%s]" % (t1,t2, med(t1,t2))
+        if verbose: print("foo %s %s [%s]" % (t1,t2, np.mean(t1,t2)) )
         t1= (t1+2*pi) % (2*pi)
         t2= (t2+2*pi) % (2*pi)
-        if verbose: print "bar %s %s" % (t1,t2)
+        if verbose: print("bar %s %s" % (t1,t2))
 
-    tc = med(t1,t2)
-    if verbose: print tc
+    tc = np.mean(t1,t2)
+    if verbose: print(tc)
     
-    rc = med(r1,r2)
+    rc = np.mean(r1,r2)
 
     xc,yc = pol2xy(rc,tc)
-    if verbose: print "buz %s" %yc
+    if verbose: print("buz %s" %yc)
     
     
-    if verbose: print "[%s,%s]" %(x1,y1),"[%s,%s]"%(x2,y2),"[%s,%s]"%(xc,yc)
+    if verbose: print("[%s,%s]" %(x1,y1),"[%s,%s]"%(x2,y2),"[%s,%s]"%(xc,yc) )
     return [xc,yc]
 
 def coordify(row):
@@ -112,7 +106,7 @@ class HivePlot:
             - axmin/axmax: <numbers> values of min/max axis attribute
         """
         if self.AXRANGED : 
-            print "Already configured"
+            print("Already configured")
             return
         
         if class_id in self.axdict.keys():
@@ -204,7 +198,7 @@ class HivePlot:
 
         else:
             if self.node_df.loc[start_id,"axis_id"] == self.node_df.loc[end_id,"axis_id"]: 
-                print "WARNING: suppressed same-axis link since not in split mode"
+                print("WARNING: suppressed same-axis link since not in split mode")
                 return -1
             sx, sy = self.node_df.loc[start_id,["x","y"]]
             ex, ey = self.node_df.loc[end_id,["x","y"]]
@@ -243,22 +237,22 @@ class HivePlot:
         
         if verbose: 
             t0 = time.time()
-            print "Building graph..."
+            print("Building graph...")
         self.build_bezier()
         if verbose: 
             t1 = time.time()
-            print "...bezier done (%.3f)" % (t1 - t0)
+            print("...bezier done (%.3f)" % (t1 - t0))
             t0 = t1
         self.build_curves()
         if verbose: 
             t1 = time.time()
-            print "...curves done (%.3f)" % (t1 - t0)
+            print("...curves done (%.3f)" % (t1 - t0))
             t0 = t1
         self.build_arrows()
         if verbose: 
             t1 = time.time()
-            print "...arrows done (%.3f)" % (t1 - t0)
-            print "Graph done."
+            print("...arrows done (%.3f)" % (t1 - t0))
+            print("Graph done.")
         self.BUILT = True
             
     def add_df(self, node_df, column):

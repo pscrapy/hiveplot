@@ -9,41 +9,45 @@ from matplotlib.collections import PatchCollection
 
 import matplotlib.pyplot as plt
 
-def pol2xy(rho, theta):
+
+def _pol2xy(rho, theta):
     x = rho * np.sin(theta)
     y = rho * np.cos(theta)
-    return (x,y)
-    
-def xy2pol(x,y):
+    return (x, y)
+
+
+def _xy2pol(x, y):
     rho = np.sqrt(x**2 + y**2)
-    
-    theta = np.arctan2( x ,y)
+    theta = np.arctan2(x, y)
     
     return rho, theta
 
-def bezier_point(x1,y1,x2,y2,verbose=False):
-    r1,t1 = xy2pol(x1,y1)
-    r2,t2 = xy2pol(x2,y2)        
 
-    if t1*t2 <0 and abs(t1)+abs(t2)>pi: 
-        if verbose: print("foo %s %s [%s]" % (t1,t2, np.mean([t1,t2])) )
-        t1= (t1+2*pi) % (2*pi)
-        t2= (t2+2*pi) % (2*pi)
-        if verbose: print("bar %s %s" % (t1,t2) )
+def _bezier_point(x1, y1, x2, y2, verbose=False):
+    r1, t1 = _xy2pol(x1, y1)
+    r2, t2 = _xy2pol(x2, y2)
 
-    tc = np.mean([t1,t2])
+    if t1*t2 < 0 and abs(t1)+abs(t2) > pi:
+        if verbose: print("foo %s %s [%s]" % (t1, t2, np.mean([t1, t2])))
+        t1 = (t1+2*pi) % (2*pi)
+        t2 = (t2+2*pi) % (2*pi)
+        if verbose: print("bar %s %s" % (t1, t2))
+
+    tc = np.mean([t1, t2])
     if verbose: print(tc)
     
-    rc = np.mean([r1,r2])
+    rc = np.mean([r1, r2])
 
-    xc,yc = pol2xy(rc,tc)
-    if verbose: print("buz %s" %yc)
+    xc, yc = _pol2xy(rc, tc)
+    if verbose: print("buz %s" % yc)
     
-    if verbose: print("[%s,%s]" %(x1,y1),"[%s,%s]"%(x2,y2),"[%s,%s]"%(xc,yc) )
-    return [xc,yc]
+    if verbose: print("[%s,%s]" % (x1, y1), "[%s,%s]" % (x2, y2), "[%s,%s]" % (xc, yc))
+    return [xc, yc]
 
-def bezierify(row):
-    return pd.Series(bezier_point(row.start_x, row.start_y, row.end_x, row.end_y))
+
+def _bezierify(row):
+    return pd.Series(_bezier_point(row.start_x, row.start_y, row.end_x, row.end_y))
+
 
 def curvify(row):
     p = Path(
@@ -52,12 +56,12 @@ def curvify(row):
     )
     return p
 
+
 def arrowify(row):
     arrow = FancyArrowPatch(path=row["path"],
-                                    arrowstyle="Simple,tail_width=0.005,head_width=0.2,head_length=0.4",
-                                    alpha=row.alpha,
-                                    color=row.edgecolor)
-                                    # **row.markdict)
+                            arrowstyle="Simple,tail_width=0.005,head_width=0.2,head_length=0.4",
+                            alpha=row.alpha,
+                            color=row.edgecolor)
     return pd.Series(arrow)
 
 
@@ -65,7 +69,24 @@ def arrowify(row):
 
 class HivePlot:
     
-    def __init__(self, split, uniform = True, alpha = 0.01, edgecol = "black", rmin = 2., rmax = 12., classcolors = ["#e41a1c", "#377eb8", "#4daf4a"]):
+    def __init__(self, split,
+                 uniform=True,
+                 alpha=0.01,
+                 edgecol="black",
+                 rmin=2.,
+                 rmax=12.,
+                 classcolors=("#e41a1c", "#377eb8", "#4daf4a")
+                 ):
+        """
+
+        :param split: boolean, controls axis splitting for intra-class links
+        :param uniform: boolean (default True), indicates if axes should have same scale
+        :param alpha:
+        :param edgecol:
+        :param rmin:
+        :param rmax:
+        :param classcolors:
+        """
         self.split = split
         self.uniform = uniform
         
@@ -94,11 +115,11 @@ class HivePlot:
             ts_a = [-2*pi/3. + pi/18. + 2*pi/3. * i for i in [0,1,2]]
             ts_b = [2*pi/3. - pi/18. - 2*pi/3. * i for i in [0,1,2]]
             ts = ts_a + ts_b
-            self.axpoints = zip([pol2xy(self.rmin,t) for t in ts],[pol2xy(self.rmax,t) for t in ts] )
+            self.axpoints = zip([_pol2xy(self.rmin, t) for t in ts], [_pol2xy(self.rmax, t) for t in ts])
         else: 
             self.axnum = 3
             ts = [-2*pi/3. + 2*pi/3. * i for i in [0,1,2]]
-            self.axpoints = zip([pol2xy(self.rmin,t) for t in ts],[pol2xy(self.rmax,t) for t in ts] )
+            self.axpoints = zip([_pol2xy(self.rmin, t) for t in ts], [_pol2xy(self.rmax, t) for t in ts])
         
         self.node_df = pd.DataFrame(columns=["id_str","adj_ax","axis_id","value","x","y","rho","theta","markdict"])
         
@@ -157,8 +178,8 @@ class HivePlot:
             # new class_id, hence axdict incomplete
             else:
                 if not len(self.axdict.keys()) < 3:
-                    raise RuntimeException("Cannot have more than three classes of data")
-                    return
+                    raise RuntimeError("Cannot have more than three classes of data")
+                    return -1
                 
                 ax_id = len(self.axdict.keys())
                 self.axdict[class_id] = ax_id
@@ -173,9 +194,9 @@ class HivePlot:
     ############################
     def build_bezier(self):
         if self.split:
-            self.edge_df[["bezier_x","bezier_y"]] = self.edge_df.apply(bezierify, axis=1)
+            self.edge_df[["bezier_x","bezier_y"]] = self.edge_df.apply(_bezierify, axis=1)
         else:
-            self.edge_df[["bezier_x","bezier_y"]] = self.edge_df.apply(bezierify, axis=1)
+            self.edge_df[["bezier_x","bezier_y"]] = self.edge_df.apply(_bezierify, axis=1)
         
     def build_curves(self):
         if self.edge_df[["bezier_x","bezier_y"]].isnull().values.any():
@@ -337,7 +358,7 @@ class HivePlot:
             - stores XY coordinates 
             assumes axranges already set
         """
-        raise NotImplementedError("Old implementation, need refactoring")
+        raise NotImplementedError("Old implementation, needs refactoring")
 
         if (not self.AXRANGED) or (not self.AXDICT):
             raise RuntimeError("Cannot add nodes with unconfigured axis ranges or dictionary")
@@ -354,8 +375,8 @@ class HivePlot:
             ta = t - pi/18.
             tb = t + pi/18.
             
-            xa,ya = pol2xy(r,ta)
-            xb,yb = pol2xy(r,tb)
+            xa,ya = _pol2xy(r, ta)
+            xb,yb = _pol2xy(r, tb)
             
             self.node_df.loc[(id_str, (ax_id - 1)%3), ] = {"axis_id":ax_id, 
                                                            "value":value, 
@@ -370,7 +391,7 @@ class HivePlot:
                                                            "markdict":None }
         else:
             """ add node once """
-            x,y = pol2xy(r,t)
+            x,y = _pol2xy(r, t)
             
             self.node_df.loc[id_str] = {"axis_id":ax_id, 
                                         "value":value, 
@@ -459,7 +480,7 @@ class HivePlot:
     def add_link(self, start_id, end_id, weight=None, update_adjlist=False, bezier= False, alpha = None, edgecol = None):
         """ Adds link between "start" and "end" nodes, storing weight if necessary
         """
-        raise NotImplementedError("Old implementation, need refactoring")
+        raise NotImplementedError("Old implementation, needs refactoring")
         try:
             assert type(start_id) == str
             assert type(end_id) == str
@@ -492,7 +513,7 @@ class HivePlot:
             sx, sy = self.node_df.loc[start_id,["x","y"]]
             ex, ey = self.node_df.loc[end_id,["x","y"]]
         
-        if bezier: cx, cy = bezier_point(sx,sy,ex,ey)
+        if bezier: cx, cy = _bezier_point(sx, sy, ex, ey)
         else: cx, cy = None, None
         
         line = {"weight" : 1,
@@ -568,7 +589,7 @@ class HivePlot:
             
             r_lab = self.rmax + 2
             t = (- 2*pi/3.) + ((i + 1) * 2*pi/3.)
-            x,y = pol2xy(r_lab,t)
+            x,y = _pol2xy(r_lab, t)
             text_rot = -( np.rad2deg(t))
             
             # labels
@@ -582,8 +603,8 @@ class HivePlot:
                 tickmin = self.axranges[i][0]
                 tickmax = self.axranges[i][1]
                 
-            xmin,ymin = pol2xy(self.rmin-0.5,t)
-            xmax,ymax = pol2xy(self.rmax+0.7,t)
+            xmin,ymin = _pol2xy(self.rmin - 0.5, t)
+            xmax,ymax = _pol2xy(self.rmax + 0.7, t)
             
             if self.logvalue:
                 tickmin = 10**tickmin

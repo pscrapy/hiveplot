@@ -1,5 +1,4 @@
 # hiveplot
-
 Single-class python library for creation of [hiveplot](http://www.hiveplot.com/) data visualizations of network data.
 Starting from a pandas DataFrame containing the node adjacency table and one with node metadata the class creates the links visualization using bezier curves.
 
